@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Token Radar: pre-token protocols ranked by implied value</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <p class="eyebrow">Sealed snapshot &middot; DefiLlama protocols</p>
+    <h1>Token Radar</h1>
+    <p class="lede">Every protocol that records no token yet, ranked by what its token launch would be
+    worth &mdash; and what to do about each one before it launches.</p>
+    <dl class="stats" id="stats"></dl>
+  </div>
+</header>
+<nav class="tabs wrap" aria-label="Views">
+  <button type="button" data-tab="board" class="tab active" aria-current="page">Board</button>
+  <button type="button" data-tab="live" class="tab">Live tokens</button>
+  <button type="button" data-tab="model" class="tab">How the model works</button>
+</nav>
+<main class="wrap">
+  <section id="view-board" class="view">
+    <div class="controls" role="search">
+      <label class="ctl grow">Search
+        <input id="q" type="search" placeholder="Protocol name or slug" autocomplete="off">
+      </label>
+      <label class="ctl">Category
+        <select id="cat"><option value="">All categories</option></select>
+      </label>
+      <label class="ctl">Chain
+        <select id="chain"><option value="">All chains</option></select>
+      </label>
+      <label class="ctl">Sort by
+        <select id="sort">
+          <option value="implied">Implied value</option>
+          <option value="tvl">TVL</option>
+          <option value="growth">7-day change</option>
+          <option value="age">Age (no token)</option>
+          <option value="name">Name A&ndash;Z</option>
+        </select>
+      </label>
+      <label class="check"><input id="watch" type="checkbox"> Watchlist only</label>
+    </div>
+    <p class="count" id="count" aria-live="polite"></p>
+    <div id="detail" class="detail" hidden></div>
+    <div class="tablewrap">
+      <table id="board">
+        <thead><tr>
+          <th scope="col">#</th><th scope="col">Protocol</th><th scope="col">Category</th>
+          <th scope="col">Chains</th><th scope="col" class="num">TVL</th>
+          <th scope="col" class="num">7d</th><th scope="col" class="num">Age</th>
+          <th scope="col" class="num">Implied value</th>
+        </tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <p class="hint">Click a row for its model breakdown and farm plan. Implied values are the
+    radar&rsquo;s own estimates from the snapshot, not predictions of whether or when a token is issued.</p>
+  </section>
+  <section id="view-live" class="view" hidden>
+    <h2>Live tokens, kept apart</h2>
+    <p>These protocols already trade. The board never ranks them: it shows the market&rsquo;s own
+    values here, and uses their market-cap-to-TVL ratios to calibrate the model. A high ratio here
+    is a market verdict, not a farm signal.</p>
+    <div class="tablewrap">
+      <table id="live">
+        <thead><tr>
+          <th scope="col">Protocol</th><th scope="col">Category</th><th scope="col">Chains</th>
+          <th scope="col" class="num">TVL</th><th scope="col" class="num">Market cap</th>
+          <th scope="col" class="num">MCap / TVL</th>
+        </tr></thead>
+        <tbody id="live-rows"></tbody>
+      </table>
+    </div>
+  </section>
+  <section id="view-model" class="view" hidden>
+    <h2>How the model works</h2>
+    <p>One formula scores every row, from the snapshot&rsquo;s own figures only. No protocol name is
+    ever special-cased.</p>
+    <p class="formula">implied = TVL &times; category multiple &times; growth &times; maturity &times; chains</p>
+    <ul class="model-list">
+      <li><strong>Category multiple.</strong> The median market-cap-to-TVL ratio of the live-token
+      protocols in the same category, where the category has at least three live comparables &mdash;
+      otherwise the whole market&rsquo;s median &mdash; shrunk toward that market median. A DEX token
+      is worth a different share of its TVL than a lending token, and the snapshot says by how
+      much. One protocol&rsquo;s ratio never prices a whole category.</li>
+      <li><strong>Growth.</strong> 1 + the 7-day TVL change, clamped to &minus;50% &hellip; +100%,
+      at half weight. Fast-growing TVL is worth more; a shrinking one less.</li>
+      <li><strong>Maturity.</strong> 0.70 at launch, rising to 1.00 after three years with no token.
+      A protocol that has run longer has a bigger base to reward, but the effect saturates.</li>
+      <li><strong>Chains.</strong> +5% per chain beyond the first, up to five extra chains.
+      Multi-chain reach is wider distribution for a launch.</li>
+    </ul>
+    <h3>Try the model</h3>
+    <p>Move a weight and the board re-ranks live, from the same snapshot figures. The shipped board
+    uses growth weight 0.50 and a 5% chain bonus.</p>
+    <div class="sandbox">
+      <label>Growth weight <output id="gw-out">0.50</output>
+        <input id="gw" type="range" min="0" max="1" step="0.05" value="0.5"></label>
+      <label>Chain bonus <output id="cb-out">5%</output>
+        <input id="cb" type="range" min="0" max="0.1" step="0.01" value="0.05"></label>
+      <button type="button" id="reset">Reset to shipped model</button>
+    </div>
+    <h3>Category multiples, read off this snapshot</h3>
+    <div class="tablewrap">
+      <table id="multiples">
+        <thead><tr>
+          <th scope="col">Category</th><th scope="col" class="num">Live comparables</th>
+          <th scope="col" class="num">Median MCap / TVL</th><th scope="col" class="num">Multiple used</th>
+        </tr></thead>
+        <tbody id="mult-rows"></tbody>
+      </table>
+    </div>
+    <h3>What the radar does not claim</h3>
+    <ul class="model-list">
+      <li>&ldquo;Records no token&rdquo; is all the snapshot proves. A protocol on the board may still
+      hold a token its DefiLlama record does not carry.</li>
+      <li>Implied value is what a token would be worth <em>if</em> the protocol&rsquo;s record stayed
+      as it is. It says nothing about whether or when a token is issued.</li>
+      <li>The snapshot is sealed at its fetch date; nothing here updates it. A farm plan is a
+      starting point, not financial advice.</li>
+    </ul>
+  </section>
+</main>
+<footer class="wrap">
+  <p id="source"></p>
+  <p>Token Radar &middot; model radar-2 &middot; built from the sealed snapshot only. No network, no tracking.</p>
+</footer>
+<script src="../data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
